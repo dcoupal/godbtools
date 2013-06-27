@@ -63,6 +63,7 @@ func validate(flags *Flags) {
 	collCon := session.DB(flags.database).C(flags.collection)
 
 	// Read the documents
+	nbDoc := 0
 	json.Unmarshal([]byte(flags.query), &query)
 	iter := collCon.Find(query).Iter()
 	for {
@@ -72,11 +73,15 @@ func validate(flags *Flags) {
 		}
 		// Send to worker for validation
 		queue <- doc
+		nbDoc += 1
 	}
 	// Put a number of stopper in the queue to notify the workers that
 	// there is no more documents
 	for n := 0; n < flags.j; n++ {
 		queue <- nil
+	}
+	if flags.verbose == true {
+		fmt.Printf("\nValidated %d documents\n", nbDoc)
 	}
 }
 
