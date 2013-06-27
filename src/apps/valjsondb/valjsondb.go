@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 )
 
 import (
@@ -37,20 +38,39 @@ func addFlags(flagset *flag.FlagSet, flags *Flags) {
 	flagset.StringVar(&flags.collection, "collection", "", "Collection to validate")
 	flagset.StringVar(&flags.connection, "connection", "localhost:27017", "Connection to the database, if none try locally")
 	flagset.StringVar(&flags.database, "database", "", "Database to check")
-	flagset.IntVar(&flags.j, "j", 1, "Parallel factor to validate the documents")
+	flagset.IntVar(&flags.j, "j", 0, "Parallel factor to validate the documents")
 	flagset.StringVar(&flags.query, "query", "{}", "Restrict the validation to documents matching this query")
 	flagset.BoolVar(&flags.verbose, "verbose", false, "Show more info")
 	flagset.BoolVar(&flags.version, "version", false, "Show the version number")
 }
 
-func validate(flags *Flags) {
+func MaxParallelism() int {
+	maxProcs := runtime.GOMAXPROCS(0)
+	numCPU := runtime.NumCPU()
+	if maxProcs < numCPU {
+		return maxProcs
+	}
+	return numCPU
+}
+
+func validate(flags *Flags) (int, int) {
+	nbDoc := 0
+	nbInvalid := 0
 	var query map[string]interface{} = nil
 
+	nbWorkers := flags.j
+	if nbWorkers == 0 {
+		ncpu := runtime.NumCPU()
+		runtime.GOMAXPROCS(ncpu)
+		nbWorkers = ncpu
+	}
+
 	// queue of documents for the workers
-	queue := make(chan map[string]interface{})
+	queueDoc := make(chan map[string]interface{}, 100)
+	queueRes := make(chan int, nbWorkers)
 	// spawn workers
-	for i := 0; i < flags.j; i++ {
-		go worker(i, queue, flags)
+	for i := 0; i < nbWorkers; i++ {
+		go worker(i, queueDoc, queueRes, flags)
 	}
 
 	// Connect to the DB
@@ -63,7 +83,6 @@ func validate(flags *Flags) {
 	collCon := session.DB(flags.database).C(flags.collection)
 
 	// Read the documents
-	nbDoc := 0
 	json.Unmarshal([]byte(flags.query), &query)
 	iter := collCon.Find(query).Iter()
 	for {
@@ -72,20 +91,24 @@ func validate(flags *Flags) {
 			break
 		}
 		// Send to worker for validation
-		queue <- doc
+		queueDoc <- doc
 		nbDoc += 1
 	}
 	// Put a number of stopper in the queue to notify the workers that
 	// there is no more documents
-	for n := 0; n < flags.j; n++ {
-		queue <- nil
+	for n := 0; n < nbWorkers; n++ {
+		queueDoc <- nil
 	}
-	if flags.verbose == true {
-		fmt.Printf("\nValidated %d documents\n", nbDoc)
+	// read the results
+	var invalid int
+	for n := 0; n < nbWorkers; n++ {
+		invalid = <-queueRes
+		nbInvalid += invalid
 	}
+	return nbDoc, nbInvalid
 }
 
-func validateOneDoc(flags *Flags, doc map[string]interface{}) {
+func validateOneDoc(flags *Flags, doc map[string]interface{}) bool {
 	//schema, err := gojsonschema.NewJsonSchemaDocument("http://myhost/bla/schema1.json")
 	// OR
 	schema, err := gojsonschema.NewJsonSchemaDocument("file://" + flags.checks)
@@ -99,24 +122,31 @@ func validateOneDoc(flags *Flags, doc map[string]interface{}) {
 	//	panic(err.Error())
 	//}
 	validationResult := schema.Validate(doc)
-	fmt.Printf("item %v\n", doc["_id"])
-	fmt.Printf("IsValid %v\n", validationResult.IsValid())
-	fmt.Printf("%v\n", validationResult.GetErrorMessages())
+	fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+	if validationResult.IsValid() == false {
+		fmt.Printf("  %v\n", validationResult.GetErrorMessages())
+	}
+	return (validationResult.IsValid())
 }
 
-func worker(id int, queue chan map[string]interface{}, flags *Flags) {
+func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, flags *Flags) {
+	nbInvalid := 0
 	var doc map[string]interface{}
 	for {
 		// get work item (pointer) from the queue
-		doc = <-queue
+		doc = <-queueDoc
 		if doc == nil {
 			break
 		}
 		if flags.verbose == true {
 			fmt.Printf("worker #%d: item %v\n", id, doc["_id"])
 		}
-		validateOneDoc(flags, doc)
+		valid := validateOneDoc(flags, doc)
+		if valid == false {
+			nbInvalid += 1
+		}
 	}
+	queueRes <- nbInvalid
 }
 
 func main() {
@@ -130,7 +160,10 @@ func main() {
 	if flags.version == true {
 		fmt.Printf("Version %s\n", version)
 	} else {
-		validate(flags)
+		nbDoc, nbInvalid := validate(flags)
+		if flags.verbose == true {
+			fmt.Printf("\nValidated %d documents, %d have invalid schemas\n", nbDoc, nbInvalid)
+		}
 	}
 	os.Exit(rc)
 }
