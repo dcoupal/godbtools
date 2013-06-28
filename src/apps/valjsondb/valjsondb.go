@@ -60,10 +60,9 @@ func validate(flags *Flags) (int, int) {
 
 	nbWorkers := flags.j
 	if nbWorkers == 0 {
-		ncpu := runtime.NumCPU()
-		runtime.GOMAXPROCS(ncpu)
-		nbWorkers = ncpu
+		nbWorkers := MaxParallelism()
 	}
+	runtime.GOMAXPROCS(nbWorkers)
 
 	// queue of documents for the workers
 	queueDoc := make(chan map[string]interface{}, 100)
