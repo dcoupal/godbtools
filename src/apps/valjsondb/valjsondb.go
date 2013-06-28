@@ -60,7 +60,7 @@ func validate(flags *Flags) (int, int) {
 
 	nbWorkers := flags.j
 	if nbWorkers == 0 {
-		nbWorkers := MaxParallelism()
+		nbWorkers = MaxParallelism()
 	}
 	runtime.GOMAXPROCS(nbWorkers)
 
@@ -107,19 +107,8 @@ func validate(flags *Flags) (int, int) {
 	return nbDoc, nbInvalid
 }
 
-func validateOneDoc(flags *Flags, doc map[string]interface{}) bool {
-	//schema, err := gojsonschema.NewJsonSchemaDocument("http://myhost/bla/schema1.json")
-	// OR
-	schema, err := gojsonschema.NewJsonSchemaDocument("file://" + flags.checks)
+func validateOneDoc(flags *Flags, schema *gojsonschema.JsonSchemaDocument, doc map[string]interface{}) bool {
 
-	if err != nil {
-		panic(err.Error())
-	}
-
-	//jsonToValidate, err := json.Marshal(doc)
-	//if err != nil {
-	//	panic(err.Error())
-	//}
 	validationResult := schema.Validate(doc)
 	fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
 	if validationResult.IsValid() == false {
@@ -129,6 +118,12 @@ func validateOneDoc(flags *Flags, doc map[string]interface{}) bool {
 }
 
 func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, flags *Flags) {
+
+	schema, err := gojsonschema.NewJsonSchemaDocument("file://" + flags.checks)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	nbInvalid := 0
 	var doc map[string]interface{}
 	for {
@@ -140,7 +135,7 @@ func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, fla
 		if flags.verbose == true {
 			fmt.Printf("worker #%d: item %v\n", id, doc["_id"])
 		}
-		valid := validateOneDoc(flags, doc)
+		valid := validateOneDoc(flags, schema, doc)
 		if valid == false {
 			nbInvalid += 1
 		}
