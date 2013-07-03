@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/pprof"
 )
 
 import (
@@ -28,6 +29,7 @@ type Flags struct {
 	connection string
 	database   string
 	j          int
+	profileFn  string
 	query      string
 	verbose    bool
 	version    bool
@@ -39,6 +41,7 @@ func addFlags(flagset *flag.FlagSet, flags *Flags) {
 	flagset.StringVar(&flags.connection, "connection", "localhost:27017", "Connection to the database, if none try locally")
 	flagset.StringVar(&flags.database, "database", "", "Database to check")
 	flagset.IntVar(&flags.j, "j", 0, "Parallel factor to validate the documents")
+	flagset.StringVar(&flags.profileFn, "profile", "", "Run the profiler on the run")
 	flagset.StringVar(&flags.query, "query", "{}", "Restrict the validation to documents matching this query")
 	flagset.BoolVar(&flags.verbose, "verbose", false, "Show more info")
 	flagset.BoolVar(&flags.version, "version", false, "Show the version number")
@@ -110,8 +113,13 @@ func validate(flags *Flags) (int, int) {
 func validateOneDoc(flags *Flags, schema *gojsonschema.JsonSchemaDocument, doc map[string]interface{}) bool {
 
 	validationResult := schema.Validate(doc)
-	fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+	if flags.verbose == true {
+		fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+	}
 	if validationResult.IsValid() == false {
+		if flags.verbose == false {
+			fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+		}
 		fmt.Printf("  %v\n", validationResult.GetErrorMessages())
 	}
 	return (validationResult.IsValid())
@@ -151,13 +159,23 @@ func main() {
 	flags := new(Flags)
 	addFlags(flagset, flags)
 	flagset.Parse(args[1:])
+
+	if flags.profileFn != "" {
+		fmt.Printf("Will save profiling data in '%s'\n", flags.profileFn)
+		f, err := os.Create(flags.profileFn)
+		if err != nil {
+			panic(err.Error())
+		}
+		defer f.Close()
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	if flags.version == true {
 		fmt.Printf("Version %s\n", version)
 	} else {
 		nbDoc, nbInvalid := validate(flags)
-		if flags.verbose == true {
-			fmt.Printf("\nValidated %d documents, %d have invalid schemas\n", nbDoc, nbInvalid)
-		}
+		fmt.Printf("\nValidated %d documents, %d have invalid schemas\n", nbDoc, nbInvalid)
 	}
 	os.Exit(rc)
 }
