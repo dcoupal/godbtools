@@ -29,6 +29,7 @@ type Flags struct {
 	connection string
 	database   string
 	j          int
+	norun      bool
 	profileFn  string
 	query      string
 	verbose    bool
@@ -41,7 +42,8 @@ func addFlags(flagset *flag.FlagSet, flags *Flags) {
 	flagset.StringVar(&flags.connection, "connection", "localhost:27017", "Connection to the database, if none try locally")
 	flagset.StringVar(&flags.database, "database", "", "Database to check")
 	flagset.IntVar(&flags.j, "j", 0, "Parallel factor to validate the documents")
-	flagset.StringVar(&flags.profileFn, "profile", "", "Run the profiler on the run")
+	flagset.BoolVar(&flags.norun, "norun", false, "Don't run the validation, for testing only")
+	flagset.StringVar(&flags.profileFn, "profile", "", "Run the profiler and save the results in given file name")
 	flagset.StringVar(&flags.query, "query", "{}", "Restrict the validation to documents matching this query")
 	flagset.BoolVar(&flags.verbose, "verbose", false, "Show more info")
 	flagset.BoolVar(&flags.version, "version", false, "Show the version number")
@@ -143,9 +145,11 @@ func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, fla
 		if flags.verbose == true {
 			fmt.Printf("worker #%d: item %v\n", id, doc["_id"])
 		}
-		valid := validateOneDoc(flags, schema, doc)
-		if valid == false {
-			nbInvalid += 1
+		if flags.norun == false {
+			valid := validateOneDoc(flags, schema, doc)
+			if valid == false {
+				nbInvalid += 1
+			}
 		}
 	}
 	queueRes <- nbInvalid
@@ -177,5 +181,8 @@ func main() {
 		nbDoc, nbInvalid := validate(flags)
 		fmt.Printf("\nValidated %d documents, %d have invalid schemas\n", nbDoc, nbInvalid)
 	}
-	os.Exit(rc)
+	if flags.profileFn == "" {
+		// os.Exit prevent the profiler lib to work well
+		os.Exit(rc)
+	}
 }
