@@ -21,9 +21,6 @@ have the following tools installed.
   Go
   MongoDB - only needed for MongoDB support and running the corresponding tests
 
-If you decide to not support some Database, you can configure the tool, so it does
-not try to execute, or run tests, for the non-supported databases.
-
 
 Source code dependencies
 ------------------------
@@ -43,5 +40,14 @@ Running the tests
 
   2) chmod +x ./runtests
     ./runtests
-    
+
+Disabling databases
+-------------------
+
+If you decide to not support some Database, you can configure the tool, so it
+does not try to execute, or run tests, for the non-supported databases.
+The first step is to disconnect the unwanted code for the database you don't
+want to support.
+All references to the code for a database is in the package 'dbtools/db'.
+
 

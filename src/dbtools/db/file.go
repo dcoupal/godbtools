@@ -7,8 +7,8 @@ import (
 
 type TextFile struct {
 	dbtype string
-	host   string
-	path   string
+	Host   string
+	Path   string
 	query  string
 }
 
@@ -21,7 +21,7 @@ func (o *TextFile) GetDoc(query string) map[string]interface{} {
 	var doc map[string]interface{} = nil
 	if query == "" {
 		// No query, we expect the file to be the whole document
-		doc = goext.ReadJsonFile(o.path) //debugger
+		doc = goext.ReadJsonFile(o.Path) //debugger
 	} else {
 		// TODO support when many JSON documents can exist in the file
 	}
@@ -33,8 +33,8 @@ func (o *TextFile) GetQuery() string {
 }
 
 func (o *TextFile) SetDocProvider(host string, path string) {
-	o.host = host
-	o.path = path
+	o.Host = host
+	o.Path = path
 }
 
 func (o *TextFile) SetQuery(query string) {

@@ -42,7 +42,6 @@ type Flags struct {
 }
 
 func addFlags(flagset *flag.FlagSet, flags *Flags) {
-	flagset.StringVar(&flags.bucket, "bucket", "", "CouchBase bucket to connect to")
 	flagset.StringVar(&flags.data, "data", "", "Data set to check")
 	flagset.IntVar(&flags.j, "j", 0, "Parallel factor to validate the documents")
 	flagset.BoolVar(&flags.norun, "norun", false, "Don't run the validation, for testing only")
@@ -82,7 +81,7 @@ func validate(flags *Flags) (int, int) {
 		panic(err.Error())
 	}
 
-	// queue of documents for the workers
+	// queues of documents for the workers
 	queueDoc := make(chan map[string]interface{}, 100)
 	queueRes := make(chan int, nbWorkers)
 	// spawn workers

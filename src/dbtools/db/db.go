@@ -5,7 +5,17 @@ import (
 	"net/url"
 )
 
+import (
+	"dbtools/goext"
+)
+
 type Doc map[string]interface{}
+
+var supportedDbs = []string{"couchbase", "file", "mongodb"}
+
+func IsDBSupported(dbname string) bool {
+	return goext.StringInArray(dbname, supportedDbs)
+}
 
 /*
 Valid URIs

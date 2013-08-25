@@ -2,12 +2,14 @@ package db
 
 import (
 	"reflect"
+	"strings"
 )
+
 type CouchBase struct {
 	dbtype string
-	host   string
+	Host   string
+	Bucket string
 	port   int
-	bucket string
 	query  string
 }
 
@@ -25,7 +27,12 @@ func (o *CouchBase) GetQuery() string {
 }
 
 func (o *CouchBase) SetDocProvider(host string, path string) {
-	//
+	o.Host = host
+	arr := strings.Split(path, "/") // First item is empty
+	if len(arr) != 2 {
+		panic("The path to the database should have 1 field, the bucket name")
+	}
+	o.Bucket = arr[1]
 }
 
 func (o *CouchBase) SetQuery(query string) {

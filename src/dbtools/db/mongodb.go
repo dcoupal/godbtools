@@ -15,11 +15,11 @@ import (
 type MongoDB struct {
 	dbtype     string
 	Host       string
-	port       int
 	Database   string
 	Collection string
-	query      string
 	mQuery     Doc
+	port       int
+	query      string
 }
 
 func (o *MongoDB) Get(k string) interface{} {
@@ -52,6 +52,17 @@ func (o *MongoDB) GetDoc(query string) map[string]interface{} {
 	return doc
 }
 
+// test suite for valjsondb is 7.5 sec before using the iterator
+func (o *MongoDB) GetDocs() <-chan Doc {
+	ch := make(chan Doc)
+	go func() {
+		for i := 0; i < 1000; i++ {
+			ch <- map[string]interface{}{}
+		}
+	}()
+	return ch
+}
+
 func (o *MongoDB) GetQuery() string {
 	return o.query
 }
@@ -59,7 +70,9 @@ func (o *MongoDB) GetQuery() string {
 func (o *MongoDB) SetDocProvider(host string, path string) {
 	o.Host = host
 	arr := strings.Split(path, "/")
-	// TODO - test that we have enough fields
+	if len(arr) != 3 { // First item is empty
+		panic("The path to the database should have 2 fields, the db and collection names")
+	}
 	o.Database = arr[1]
 	o.Collection = arr[2]
 }

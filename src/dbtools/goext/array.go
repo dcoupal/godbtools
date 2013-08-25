@@ -16,3 +16,12 @@ func ArraysAreEqualStrings(a1 []string, a2 []string) (areEqual bool) {
 	}
 	return
 }
+
+func StringInArray(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
