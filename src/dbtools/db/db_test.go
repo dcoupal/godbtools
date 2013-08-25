@@ -21,12 +21,12 @@ func TestMongoDBProvider1(t *testing.T) {
 	if providerType != expectedType {
 		t.Errorf("Invalid value for %s, expected %s, got %s", "Provider type", expectedType, providerType)
 	}
-	db := provider.get("DB")
+	database := provider.Get("Database").(string)
 	eDb := "mydatabase"
-	if db != eDb {
-		t.Errorf("Invalid value for %s, expected %s, got %s", "Database", eDb, db)
+	if database != eDb {
+		t.Errorf("Invalid value for %s, expected %s, got %s", "Database", eDb, database)
 	}
-	coll := provider.get("Coll")
+	coll := provider.Get("Collection").(string)
 	eColl := "mycollection"
 	if coll != eColl {
 		t.Errorf("Invalid value for %s, expected %s, got %s", "Collection", coll, eColl)

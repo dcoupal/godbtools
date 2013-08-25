@@ -6,4 +6,7 @@ TODOs:
   - diff schemas
   - read schema definition from DB
   - allow to send output to file, testing should be able to match lines in it after.
+  - chmod +x on ./runtests
+  - scripts to import test data
+  - way to disable features/tests for non-active databases
   

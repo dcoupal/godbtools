@@ -12,7 +12,7 @@ type TextFile struct {
 	query  string
 }
 
-func (o *TextFile) get(k string) interface{} {
+func (o *TextFile) Get(k string) interface{} {
 	var v interface{} = reflect.ValueOf(o).Elem().FieldByName(k).Interface()
 	return v
 }

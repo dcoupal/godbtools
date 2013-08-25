@@ -11,7 +11,7 @@ type CouchBase struct {
 	query  string
 }
 
-func (o *CouchBase) get(k string) interface{} {
+func (o *CouchBase) Get(k string) interface{} {
 	var v interface{} = reflect.ValueOf(o).Elem().FieldByName(k).Interface()
 	return v
 }

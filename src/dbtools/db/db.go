@@ -40,7 +40,7 @@ func GetDocProvider(uri string) (provider DocProvider) {
 }
 
 type DocProvider interface {
-	get(string) interface{}
+	Get(string) interface{}
 	GetDoc(string) map[string]interface{}
 	GetQuery() string
 	SetDocProvider(host string, path string)

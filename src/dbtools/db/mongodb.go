@@ -14,17 +14,15 @@ import (
 
 type MongoDB struct {
 	dbtype     string
-	host       string
+	Host       string
 	port       int
-	database   string
-	collection string
+	Database   string
+	Collection string
 	query      string
 	mQuery     Doc
-	DB         string
-	Coll       string
 }
 
-func (o *MongoDB) get(k string) interface{} {
+func (o *MongoDB) Get(k string) interface{} {
 	var v interface{} = nil
 	v = reflect.ValueOf(o).Elem().FieldByName(k).Interface()
 	return v
@@ -39,13 +37,13 @@ func (o *MongoDB) GetDoc(query string) map[string]interface{} {
 		//json.Unmarshal([]byte(query), &mQuery)
 		mQuery = Str2mQuery(query)
 	}
-	session, err := mgo.Dial(o.host)
+	session, err := mgo.Dial(o.Host)
 	if err != nil {
-		fmt.Printf("Can't connect to %s\n", o.host)
+		fmt.Printf("Can't connect to %s\n", o.Host)
 		panic(err)
 	}
 	defer session.Close()
-	coll := session.DB(o.database).C(o.collection)
+	coll := session.DB(o.Database).C(o.Collection)
 	err = coll.Find(mQuery).One(&doc) //debugger
 	if err != nil {
 		fmt.Printf("Can't find document with query %v\n", mQuery)
@@ -59,13 +57,11 @@ func (o *MongoDB) GetQuery() string {
 }
 
 func (o *MongoDB) SetDocProvider(host string, path string) {
-	o.host = host
+	o.Host = host
 	arr := strings.Split(path, "/")
 	// TODO - test that we have enough fields
-	o.database = arr[1]
-	o.collection = arr[2]
-	o.DB = o.database
-	o.Coll = o.collection
+	o.Database = arr[1]
+	o.Collection = arr[2]
 }
 
 func (o *MongoDB) SetQuery(query string) {

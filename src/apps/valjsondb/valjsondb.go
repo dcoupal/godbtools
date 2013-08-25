@@ -27,28 +27,29 @@ const (
 
 type Flags struct {
 	bucket     string
-	checks     string
 	collection string
 	connection string
+	data       string
 	database   string
 	j          int
 	norun      bool
 	profileFn  string
 	query      string
+	schema     string
+	short      bool
 	verbose    bool
 	version    bool
 }
 
 func addFlags(flagset *flag.FlagSet, flags *Flags) {
 	flagset.StringVar(&flags.bucket, "bucket", "", "CouchBase bucket to connect to")
-	flagset.StringVar(&flags.checks, "checks", "", "Checks to run on the collection")
-	flagset.StringVar(&flags.collection, "collection", "", "Collection to validate")
-	flagset.StringVar(&flags.connection, "connection", "localhost:27017", "Connection to the database, if none try locally")
-	flagset.StringVar(&flags.database, "database", "", "Database to check")
+	flagset.StringVar(&flags.data, "data", "", "Data set to check")
 	flagset.IntVar(&flags.j, "j", 0, "Parallel factor to validate the documents")
 	flagset.BoolVar(&flags.norun, "norun", false, "Don't run the validation, for testing only")
 	flagset.StringVar(&flags.profileFn, "profile", "", "Run the profiler and save the results in given file name")
 	flagset.StringVar(&flags.query, "query", "{}", "Restrict the validation to documents matching this query")
+	flagset.StringVar(&flags.schema, "schema", "", "Schema to check on the data set")
+	flagset.BoolVar(&flags.short, "short", false, "Show less info")
 	flagset.BoolVar(&flags.verbose, "verbose", false, "Show more info")
 	flagset.BoolVar(&flags.version, "version", false, "Show the version number")
 }
@@ -67,34 +68,45 @@ func validate(flags *Flags) (int, int) {
 	nbInvalid := 0
 	var query map[string]interface{} = nil
 
-	// Connect to the DB
-	if flags.bucket != "" {
-		// This is a CouchBase DB
-	} else if flags.database != "" && flags.collection != "" {
-		// This is a MongoDB
-	}
-
 	nbWorkers := flags.j
 	if nbWorkers == 0 {
 		nbWorkers = MaxParallelism()
 	}
 	runtime.GOMAXPROCS(nbWorkers)
 
+	// Read the schema
+	schemaProvider := db.GetDocProvider(flags.schema)
+	rawschema := schemaProvider.GetDoc(schemaProvider.GetQuery())
+	schema, err := gojsonschema.NewJsonSchemaDocument(rawschema)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	// queue of documents for the workers
 	queueDoc := make(chan map[string]interface{}, 100)
 	queueRes := make(chan int, nbWorkers)
 	// spawn workers
 	for i := 0; i < nbWorkers; i++ {
-		go worker(i, queueDoc, queueRes, flags)
+		go worker(i, queueDoc, queueRes, schema, flags)
 	}
 
-	session, err := mgo.Dial(flags.connection)
+	var conn, database, coll string
+	if flags.data != "" {
+		dataProvider := db.GetDocProvider(flags.data)
+		conn = dataProvider.Get("Host").(string)
+		database = dataProvider.Get("Database").(string)
+		coll = dataProvider.Get("Collection").(string)
+	} else {
+		fmt.Println("Must provide a dataset with -data")
+		panic(err)
+	}
+	session, err := mgo.Dial(conn)
 	if err != nil {
-		fmt.Printf("Can't connect to %s\n", flags.connection)
+		fmt.Printf("Can't connect to %s\n", conn)
 		panic(err)
 	}
 	defer session.Close()
-	collCon := session.DB(flags.database).C(flags.collection)
+	collCon := session.DB(database).C(coll)
 
 	// Read the documents
 	// TODO, optimize by reading only the fields to validate?
@@ -130,25 +142,21 @@ func validateOneDoc(flags *Flags, schema *gojsonschema.JsonSchemaDocument, doc m
 	if flags.verbose == true {
 		fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
 	}
+	// What do we show when the document is invalid
 	if validationResult.IsValid() == false {
-		if flags.verbose == false {
+		if flags.short == true {
+			// Show no details
+		} else if flags.verbose == true {
+			fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+			fmt.Printf("  %v\n", validationResult.GetErrorMessages())
+		} else {
 			fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
 		}
-		fmt.Printf("  %v\n", validationResult.GetErrorMessages())
 	}
 	return (validationResult.IsValid())
 }
 
-func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, flags *Flags) {
-
-	docProvider := db.GetDocProvider(flags.checks) //debugger
-	// TODO allow to pass a query for providers other than textfile
-	rawschema := docProvider.GetDoc(docProvider.GetQuery())
-	schema, err := gojsonschema.NewJsonSchemaDocument(rawschema)
-	//schema, err := gojsonschema.NewJsonSchemaDocument("file://" + flags.checks)
-	if err != nil {
-		panic(err.Error())
-	}
+func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, schema *gojsonschema.JsonSchemaDocument, flags *Flags) {
 
 	nbInvalid := 0
 	var doc map[string]interface{}
