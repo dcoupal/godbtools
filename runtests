@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+export ROOTDIR=`pwd`
+export GOPATH=$ROOTDIR
+
+for DIR in dbtools/db dbtools/goext apps/valjsondb
+do
+  cd $ROOTDIR/src/$DIR
+  echo Running tests in $DIR
+  go test -i
+  go test
+  echo
+done
+

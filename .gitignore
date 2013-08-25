@@ -24,4 +24,5 @@ _testmain.go
 # Project specific
 github.com
 out
+prof.data
 src/labix.org

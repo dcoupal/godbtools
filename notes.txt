@@ -1,0 +1,9 @@
+
+Using Python extensions in debugger
+  source /usr/local/go/src/pkg/runtime/runtime-gdb.py
+
+TODOs:
+  - diff schemas
+  - read schema definition from DB
+  - allow to send output to file, testing should be able to match lines in it after.
+  

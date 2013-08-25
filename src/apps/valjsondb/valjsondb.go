@@ -12,18 +12,21 @@ import (
 )
 
 import (
+	"dbtools/db"
+	//"github.com/couchbaselabs/go-couchbase"
 	"github.com/sigu-399/gojsonschema"
 	"labix.org/v2/mgo"
 )
 
 const (
-	version = "0.1.0"
+	version = "0.1.1"
 	workers = 10
 )
 
 // TODO have a type for MongoDB document
 
 type Flags struct {
+	bucket     string
 	checks     string
 	collection string
 	connection string
@@ -37,6 +40,7 @@ type Flags struct {
 }
 
 func addFlags(flagset *flag.FlagSet, flags *Flags) {
+	flagset.StringVar(&flags.bucket, "bucket", "", "CouchBase bucket to connect to")
 	flagset.StringVar(&flags.checks, "checks", "", "Checks to run on the collection")
 	flagset.StringVar(&flags.collection, "collection", "", "Collection to validate")
 	flagset.StringVar(&flags.connection, "connection", "localhost:27017", "Connection to the database, if none try locally")
@@ -63,6 +67,13 @@ func validate(flags *Flags) (int, int) {
 	nbInvalid := 0
 	var query map[string]interface{} = nil
 
+	// Connect to the DB
+	if flags.bucket != "" {
+		// This is a CouchBase DB
+	} else if flags.database != "" && flags.collection != "" {
+		// This is a MongoDB
+	}
+
 	nbWorkers := flags.j
 	if nbWorkers == 0 {
 		nbWorkers = MaxParallelism()
@@ -77,7 +88,6 @@ func validate(flags *Flags) (int, int) {
 		go worker(i, queueDoc, queueRes, flags)
 	}
 
-	// Connect to the DB
 	session, err := mgo.Dial(flags.connection)
 	if err != nil {
 		fmt.Printf("Can't connect to %s\n", flags.connection)
@@ -87,6 +97,8 @@ func validate(flags *Flags) (int, int) {
 	collCon := session.DB(flags.database).C(flags.collection)
 
 	// Read the documents
+	// TODO, optimize by reading only the fields to validate?
+	// TODO, make a generic iterator
 	json.Unmarshal([]byte(flags.query), &query)
 	iter := collCon.Find(query).Iter()
 	for {
@@ -129,7 +141,11 @@ func validateOneDoc(flags *Flags, schema *gojsonschema.JsonSchemaDocument, doc m
 
 func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, flags *Flags) {
 
-	schema, err := gojsonschema.NewJsonSchemaDocument("file://" + flags.checks)
+	docProvider := db.GetDocProvider(flags.checks) //debugger
+	// TODO allow to pass a query for providers other than textfile
+	rawschema := docProvider.GetDoc(docProvider.GetQuery())
+	schema, err := gojsonschema.NewJsonSchemaDocument(rawschema)
+	//schema, err := gojsonschema.NewJsonSchemaDocument("file://" + flags.checks)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -155,10 +171,8 @@ func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, fla
 	queueRes <- nbInvalid
 }
 
-func main() {
+func doit(args []string) int {
 	rc := 0
-	args := make([]string, len(os.Args))
-	copy(args, os.Args)
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	flags := new(Flags)
 	addFlags(flagset, flags)
@@ -180,9 +194,17 @@ func main() {
 	} else {
 		nbDoc, nbInvalid := validate(flags)
 		fmt.Printf("\nValidated %d documents, %d have invalid schemas\n", nbDoc, nbInvalid)
+		if nbInvalid > 0 {
+			rc = 1
+		}
 	}
-	if flags.profileFn == "" {
-		// os.Exit prevent the profiler lib to work well
-		os.Exit(rc)
-	}
+	return rc
+}
+
+func main() {
+	args := make([]string, len(os.Args))
+	copy(args, os.Args)
+	rc := doit(args)
+	// FIXME - os.Exit prevent the profiler lib to work well
+	os.Exit(rc)
 }

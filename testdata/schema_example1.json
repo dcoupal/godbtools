@@ -1,0 +1,19 @@
+{
+	"$schema": "http://json-schema.org/draft-03/schema",
+	"id": "http://jsonschema.net",
+	"properties":{
+		"score": {
+			"type":"number",
+			"id": "http://jsonschema.net/score"
+		},
+		"student_id": {
+			"type":"number",
+			"id": "http://jsonschema.net/student_id"
+		},
+		"type": {
+			"type":"string",
+			"id": "http://jsonschema.net/type"
+		}
+	}
+}
+
