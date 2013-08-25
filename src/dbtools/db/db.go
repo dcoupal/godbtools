@@ -52,6 +52,7 @@ func GetDocProvider(uri string) (provider DocProvider) {
 type DocProvider interface {
 	Get(string) interface{}
 	GetDoc(string) map[string]interface{}
+	GetDocs() <-chan Doc
 	GetQuery() string
 	SetDocProvider(host string, path string)
 	SetQuery(query string)

@@ -3,7 +3,6 @@ package main
 // Using this site to generate schemas from examples: http://www.jsonschema.net/#
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -13,9 +12,7 @@ import (
 
 import (
 	"dbtools/db"
-	//"github.com/couchbaselabs/go-couchbase"
 	"github.com/sigu-399/gojsonschema"
-	"labix.org/v2/mgo"
 )
 
 const (
@@ -65,7 +62,6 @@ func MaxParallelism() int {
 func validate(flags *Flags) (int, int) {
 	nbDoc := 0
 	nbInvalid := 0
-	var query map[string]interface{} = nil
 
 	nbWorkers := flags.j
 	if nbWorkers == 0 {
@@ -89,35 +85,19 @@ func validate(flags *Flags) (int, int) {
 		go worker(i, queueDoc, queueRes, schema, flags)
 	}
 
-	var conn, database, coll string
+	var dataProvider db.DocProvider
 	if flags.data != "" {
-		dataProvider := db.GetDocProvider(flags.data)
-		conn = dataProvider.Get("Host").(string)
-		database = dataProvider.Get("Database").(string)
-		coll = dataProvider.Get("Collection").(string)
+		dataProvider = db.GetDocProvider(flags.data)
 	} else {
 		fmt.Println("Must provide a dataset with -data")
 		panic(err)
 	}
-	session, err := mgo.Dial(conn)
-	if err != nil {
-		fmt.Printf("Can't connect to %s\n", conn)
-		panic(err)
-	}
-	defer session.Close()
-	collCon := session.DB(database).C(coll)
-
 	// Read the documents
-	// TODO, optimize by reading only the fields to validate?
-	// TODO, make a generic iterator
-	json.Unmarshal([]byte(flags.query), &query)
-	iter := collCon.Find(query).Iter()
-	for {
-		var doc map[string]interface{}
-		if iter.Next(&doc) == false {
+	for doc := range dataProvider.GetDocs() {
+		// Send to worker for validation
+		if doc == nil {
 			break
 		}
-		// Send to worker for validation
 		queueDoc <- doc
 		nbDoc += 1
 	}

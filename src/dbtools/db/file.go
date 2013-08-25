@@ -1,7 +1,10 @@
 package db
 
 import (
+	"bufio"
 	"dbtools/goext"
+	"encoding/json"
+	"os"
 	"reflect"
 )
 
@@ -21,11 +24,27 @@ func (o *TextFile) GetDoc(query string) map[string]interface{} {
 	var doc map[string]interface{} = nil
 	if query == "" {
 		// No query, we expect the file to be the whole document
-		doc = goext.ReadJsonFile(o.Path) //debugger
+		doc = goext.ReadJsonFile(o.Path)
 	} else {
 		// TODO support when many JSON documents can exist in the file
 	}
 	return doc
+}
+
+func (o *TextFile) GetDocs() <-chan Doc {
+	ch := make(chan Doc)
+	go func() {
+		file, _ := os.Open(o.Path)
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			var aDoc map[string]interface{} //debugger
+			jsonLine := scanner.Text()
+			json.Unmarshal([]byte(jsonLine), &aDoc)
+			ch <- aDoc
+		}
+		ch <- nil
+	}()
+	return ch
 }
 
 func (o *TextFile) GetQuery() string {

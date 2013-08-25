@@ -10,6 +10,7 @@ import (
 
 import (
 	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 type MongoDB struct {
@@ -52,13 +53,32 @@ func (o *MongoDB) GetDoc(query string) map[string]interface{} {
 	return doc
 }
 
-// test suite for valjsondb is 7.5 sec before using the iterator
+// test suite for valjsondb is 7.5 sec before using the iterator, 7.8 with iterator
 func (o *MongoDB) GetDocs() <-chan Doc {
+	// Connect to MongoDB
+	session, err := mgo.Dial(o.Host)
+	if err != nil {
+		fmt.Printf("Can't connect to %s\n", o.Host)
+		panic(err)
+	}
+	// FIXME - not sure where to put this statement.
+	//         here it close too early for the goroutine
+	//defer session.Close()
+
+	collCon := session.DB(o.Database).C(o.Collection) //debugger
+	iter := collCon.Find(bson.M{}).Iter()
+
+	// TODO - may want to size the channel, so it does not wait to read more from the DB ahead of time
 	ch := make(chan Doc)
 	go func() {
-		for i := 0; i < 1000; i++ {
-			ch <- map[string]interface{}{}
+		for {
+			var aDoc map[string]interface{} //debugger
+			if iter.Next(&aDoc) == false {
+				break
+			}
+			ch <- aDoc
 		}
+		ch <- nil
 	}()
 	return ch
 }

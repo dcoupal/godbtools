@@ -22,6 +22,11 @@ func (o *CouchBase) GetDoc(query string) (doc map[string]interface{}) {
 	return
 }
 
+func (o *CouchBase) GetDocs() <-chan Doc {
+	ch := make(chan Doc)
+	return ch
+}
+
 func (o *CouchBase) GetQuery() string {
 	return o.query
 }

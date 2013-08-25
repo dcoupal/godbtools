@@ -1,0 +1,9 @@
+{
+	"$schema": "http://json-schema.org/draft-03/schema",
+	"id": "http://jsonschema.net",
+	"properties":{
+        "id" : { "type" : "number" }
+	},
+	"required" : [ "id"]
+}
+

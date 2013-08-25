@@ -29,7 +29,7 @@ func Test2(t *testing.T) {
 
 }
 
-func _Test3(t *testing.T) {
+func Test3(t *testing.T) {
 	returnCode := doit([]string{"valjsondb", "-schema", "file:" + gopath + "/testdata/schema_example3.json",
 		"-data", "file:" + gopath + "/testdata/beers.data"})
 	eReturnCode := 0
