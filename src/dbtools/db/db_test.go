@@ -13,10 +13,41 @@ func TestCouchBaseProvider1(t *testing.T) {
 		if providerType != expectedType {
 			t.Errorf("Invalid value for %s, expected %s, got %s", "Provider type", expectedType, providerType)
 		}
+		pool := provider.Get("Pool").(string)
+		ePool := "default"
+		if pool != ePool {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Pool", ePool, pool)
+		}
 		bucket := provider.Get("Bucket").(string)
 		eBucket := "mybucket"
 		if bucket != eBucket {
 			t.Errorf("Invalid value for %s, expected %s, got %s", "Bucket", eBucket, bucket)
+		}
+	}
+}
+
+func TestCouchBaseProvider2(t *testing.T) {
+	if IsDBSupported("couchbase") {
+		provider := GetDocProvider("couchbase://localhost/mypool/mybucket?1")
+		providerType := reflect.TypeOf(provider).String()
+		expectedType := "*db.CouchBase"
+		if providerType != expectedType {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Provider type", expectedType, providerType)
+		}
+		pool := provider.Get("Pool").(string)
+		ePool := "mypool"
+		if pool != ePool {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Pool", ePool, pool)
+		}
+		bucket := provider.Get("Bucket").(string)
+		eBucket := "mybucket"
+		if bucket != eBucket {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Bucket", eBucket, bucket)
+		}
+		query := provider.Get("Query").(string)
+		eQuery := "1"
+		if query != eQuery {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Query", eQuery, query)
 		}
 	}
 }

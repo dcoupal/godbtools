@@ -40,6 +40,16 @@ func Test3(t *testing.T) {
 }
 
 func Test4(t *testing.T) {
+	returnCode := doit([]string{"valjsondb", "-schema", "couchbase:/test?1",
+		"-data", "file:" + gopath + "/testdata/beers.data"})
+	eReturnCode := 0
+	if returnCode != eReturnCode {
+		t.Errorf("Invalid value for %s, expected %s, got %s", "Return code", eReturnCode, returnCode)
+	}
+
+}
+
+func Test5(t *testing.T) {
 	returnCode := doit([]string{"valjsondb", "-schema", "../../../testdata/schema_example1.json",
 		"-data", "mongodb:/nosql2013/logs"})
 	eReturnCode := 0
@@ -50,7 +60,7 @@ func Test4(t *testing.T) {
 }
 
 // Invalid documents, get a non-zero return code
-func Test5(t *testing.T) {
+func TestFailures1(t *testing.T) {
 	returnCode := doit([]string{"valjsondb", "-schema", "file:" + gopath + "/testdata/schema_example2.json",
 		"-data", "mongodb:/nosql2013/logs", "-short"})
 	eReturnCode := 1
@@ -60,7 +70,7 @@ func Test5(t *testing.T) {
 
 }
 
-func Test6(t *testing.T) {
+func TestFailures2(t *testing.T) {
 	returnCode := doit([]string{"valjsondb", "-schema", "mongodb:/nosql2013/schemas?database=nosql2013&collection=logs",
 		"-data", "mongodb:/nosql2013/logs", "-short"})
 	eReturnCode := 1

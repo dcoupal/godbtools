@@ -36,6 +36,7 @@ func GetDocProvider(uri string) (provider DocProvider) {
 	if dbtype == "couchbase" {
 		provider = new(CouchBase)
 		provider.SetDocProvider(host, path)
+		provider.SetQuery(query)
 	} else if dbtype == "mongodb" {
 		provider = new(MongoDB)
 		provider.SetDocProvider(host, path)
@@ -43,6 +44,7 @@ func GetDocProvider(uri string) (provider DocProvider) {
 	} else if dbtype == "file" || dbtype == "" {
 		provider = new(TextFile)
 		provider.SetDocProvider(host, path)
+		provider.SetQuery(query)
 	} else {
 		fmt.Printf("No valid type in URI: %s", uri)
 	}
