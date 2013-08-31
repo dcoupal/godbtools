@@ -52,6 +52,32 @@ func TestCouchBaseProvider2(t *testing.T) {
 	}
 }
 
+func TestCouchBaseProvider3(t *testing.T) {
+	if IsDBSupported("couchbase") {
+		provider := GetDocProvider("couchbase://localhost/mybucket/_design/mydesign/_view/myview")
+		providerType := reflect.TypeOf(provider).String()
+		expectedType := "*db.CouchBase"
+		if providerType != expectedType {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Provider type", expectedType, providerType)
+		}
+		bucket := provider.Get("Bucket").(string)
+		eBucket := "mybucket"
+		if bucket != eBucket {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Bucket", eBucket, bucket)
+		}
+		design := provider.Get("Design").(string)
+		eDesign := "mydesign"
+		if design != eDesign {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "Design", eDesign, design)
+		}
+		view := provider.Get("View").(string)
+		eView := "myview"
+		if view != eView {
+			t.Errorf("Invalid value for %s, expected %s, got %s", "View", eView, view)
+		}
+	}
+}
+
 func TestMongoDBProvider1(t *testing.T) {
 	if IsDBSupported("mongodb") {
 		provider := GetDocProvider("mongodb://localhost/mydatabase/mycollection")

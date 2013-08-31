@@ -68,7 +68,7 @@ func (o *MongoDB) GetDocs() <-chan Doc {
 	collCon := session.DB(o.Database).C(o.Collection) //debugger
 	iter := collCon.Find(bson.M{}).Iter()
 
-	// TODO - may want to size the channel, so it does not wait to read more from the DB ahead of time
+	// TODO - may want to size the channel, so it does not wait to read more from the DB ahead of ti
 	ch := make(chan Doc)
 	go func() {
 		for {

@@ -2,10 +2,13 @@ package db
 
 import (
 	"bufio"
-	"dbtools/goext"
 	"encoding/json"
 	"os"
 	"reflect"
+)
+
+import (
+	"dbtools/goext"
 )
 
 type TextFile struct {

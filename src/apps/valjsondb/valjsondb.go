@@ -50,6 +50,16 @@ func addFlags(flagset *flag.FlagSet, flags *Flags) {
 	flagset.BoolVar(&flags.version, "version", false, "Show the version number")
 }
 
+func getId(doc map[string]interface{}) interface{} {
+	var id interface{}
+	if value, ok := doc["_id"]; ok {
+		id = value
+	} else if value, ok := doc["id"]; ok {
+		id = value
+	}
+	return id
+}
+
 func MaxParallelism() int {
 	maxProcs := runtime.GOMAXPROCS(0)
 	numCPU := runtime.NumCPU()
@@ -118,18 +128,19 @@ func validate(flags *Flags) (int, int) {
 func validateOneDoc(flags *Flags, schema *gojsonschema.JsonSchemaDocument, doc map[string]interface{}) bool {
 
 	validationResult := schema.Validate(doc)
+	did := getId(doc)
 	if flags.verbose == true {
-		fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+		fmt.Printf("  item %v, isvalid %v\n", did, validationResult.IsValid())
 	}
 	// What do we show when the document is invalid
 	if validationResult.IsValid() == false {
 		if flags.short == true {
 			// Show no details
 		} else if flags.verbose == true {
-			fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+			fmt.Printf("  item %v, isvalid %v\n", did, validationResult.IsValid())
 			fmt.Printf("  %v\n", validationResult.GetErrorMessages())
 		} else {
-			fmt.Printf("  item %v, isvalid %v\n", doc["_id"], validationResult.IsValid())
+			fmt.Printf("  item %v, isvalid %v\n", did, validationResult.IsValid())
 		}
 	}
 	return (validationResult.IsValid())
@@ -146,7 +157,8 @@ func worker(id int, queueDoc chan map[string]interface{}, queueRes chan int, sch
 			break
 		}
 		if flags.verbose == true {
-			fmt.Printf("worker #%d: item %v\n", id, doc["_id"])
+			did := getId(doc)
+			fmt.Printf("worker #%d: item %v\n", id, did)
 		}
 		if flags.norun == false {
 			valid := validateOneDoc(flags, schema, doc)
