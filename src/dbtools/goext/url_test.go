@@ -140,3 +140,50 @@ func FailingTestFileURI4(t *testing.T) {
 		t.Errorf("Invalid value for %s, expected %s, got %v", "bucket", expect, u.Path)
 	}
 }
+
+func TestGetParts1(t *testing.T) {
+	var uri, match, expected string
+	var matches []string
+	var ok bool
+	var sections [][]string
+	uri = "/_design/mydesign/_view/myview"
+	sections = [][]string{{""}, {"_design", "designs"}, {}, {"_view", "views"}, {}}
+	if _, ok = GetParts(uri, sections); !ok {
+		t.Errorf("Should match %v, %v", uri, sections)
+	}
+	uri = "/designs/mydesign/views/myview"
+	if matches, ok = GetParts(uri, sections); !ok {
+		t.Errorf("Should match %v, %v", uri, sections)
+	}
+	match = matches[2]
+	expected = "mydesign"
+	if match != expected {
+		t.Errorf("Should match %v, %v", match, expected)
+	}
+	match = matches[4]
+	expected = "myview"
+	if match != expected {
+		t.Errorf("Should match %v, %v", match, expected)
+	}
+	uri = "/designs/mydesign/view/myview"
+	if _, ok = GetParts(uri, sections); ok {
+		t.Errorf("Should not match %v, %v", uri, sections)
+	}
+}
+
+func TestGetParts2(t *testing.T) {
+	var uri, match, expected string
+	var matches []string
+	var ok bool
+	var sections [][]string
+	uri = "/buckets/mybucket"
+	sections = [][]string{{""}, {"buckets"}, {}}
+	if matches, ok = GetParts(uri, sections); !ok {
+		t.Errorf("Should match %v, %v", uri, sections)
+	}
+	match = matches[2]
+	expected = "mybucket"
+	if match != expected {
+		t.Errorf("Should match %v, %v", match, expected)
+	}
+}

@@ -3,10 +3,10 @@ package db
 import (
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 import (
+	"dbtools/goext"
 	"github.com/couchbaselabs/go-couchbase"
 )
 
@@ -78,6 +78,7 @@ func (o *CouchBase) GetDocs() <-chan Doc {
 			ch <- aDoc
 		}
 		ch <- nil
+		b.Close()
 	}()
 	return ch
 }
@@ -115,20 +116,24 @@ func (o *CouchBase) SetDocProvider(host string, path string) {
 	} else {
 		o.Host = "localhost:8091"
 	}
-	arr := strings.Split(path, "/") // First item is empty
-	if len(arr) == 2 {
-		o.Pool = "default"
-		o.Bucket = arr[1]
-	} else if len(arr) == 3 {
-		o.Pool = arr[1]
-		o.Bucket = arr[2]
-	} else if len(arr) == 6 && arr[2] == "_design" && arr[4] == "_view" {
-		o.Pool = "default"
-		o.Bucket = arr[1]
-		o.Design = arr[3]
-		o.View = arr[5]
+	o.Pool = "default" //debugger
+	if matches, ok := goext.GetParts(path, [][]string{{""}, {"buckets"}, {}, {"_design", "designs"}, {}, {"_view", "views"}, {}}); ok {
+		o.Bucket = matches[2]
+		o.Design = matches[4]
+		o.View = matches[6]
+	} else if matches, ok := goext.GetParts(path, [][]string{{""}, {}, {"_design", "designs"}, {}, {"_view", "views"}, {}}); ok {
+		o.Bucket = matches[1]
+		o.Design = matches[3]
+		o.View = matches[5]
+	} else if matches, ok := goext.GetParts(path, [][]string{{""}, {"buckets"}, {}}); ok {
+		o.Bucket = matches[2]
+	} else if matches, ok := goext.GetParts(path, [][]string{{""}, {}}); ok {
+		o.Bucket = matches[1]
+	} else if matches, ok := goext.GetParts(path, [][]string{{""}, {}, {}}); ok {
+		o.Pool = matches[1]
+		o.Bucket = matches[2]
 	} else {
-		panic("Invalid path for a couchbase provider: " + path)
+		panic("Invalid path for a CouchBase provider: " + path)
 	}
 }
 

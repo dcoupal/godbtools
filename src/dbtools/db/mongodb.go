@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
-	"strings"
 )
 
 import (
+	"dbtools/goext"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
@@ -89,12 +89,15 @@ func (o *MongoDB) GetQuery() string {
 
 func (o *MongoDB) SetDocProvider(host string, path string) {
 	o.Host = host
-	arr := strings.Split(path, "/")
-	if len(arr) != 3 { // First item is empty
-		panic("The path to the database should have 2 fields, the db and collection names")
+	if matches, ok := goext.GetParts(path, [][]string{{""}, {"databases", "db"}, {}, {"collections", "c"}, {}}); ok {
+		o.Database = matches[2]
+		o.Collection = matches[4]
+	} else if matches, ok := goext.GetParts(path, [][]string{{""}, {}, {}}); ok {
+		o.Database = matches[1]
+		o.Collection = matches[2]
+	} else { // First item is empty
+		panic("Invalid path for a MongoDB provider")
 	}
-	o.Database = arr[1]
-	o.Collection = arr[2]
 }
 
 func (o *MongoDB) SetQuery(query string) {
